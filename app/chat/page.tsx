@@ -232,7 +232,7 @@ export default function ChatPage() {
                   key={session.id}
                   type="button"
                   onClick={() => loadSession(session.id)}
-                  className={`w-full rounded-lg px-3 py-2 text-left text-sm transition ${
+                  className={`w-full cursor-pointer rounded-lg px-3 py-2 text-left text-sm transition ${
                     activeSessionId === session.id
                       ? "bg-white text-slate-900 shadow-sm"
                       : "bg-transparent text-slate-700 hover:bg-white/70"
