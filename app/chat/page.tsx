@@ -216,8 +216,8 @@ export default function ChatPage() {
       <div className="mx-auto w-full max-w-6xl px-4 py-6">
         <AppHeader />
 
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-[270px_1fr]">
-          <aside className="rounded-2xl border border-slate-200 bg-[#f3eee4] p-3 md:sticky md:top-[5.5rem] md:h-[calc(100vh-7rem)]">
+        <div className="grid min-w-0 grid-cols-1 gap-4 md:grid-cols-[minmax(0,270px)_minmax(0,1fr)]">
+          <aside className="min-w-0 rounded-2xl border border-slate-200 bg-[#f3eee4] p-3 md:sticky md:top-[5.5rem] md:h-[calc(100vh-7rem)]">
             <button
               type="button"
               onClick={createNewSession}
@@ -265,24 +265,24 @@ export default function ChatPage() {
 
           </aside>
 
-          <section className="relative flex min-h-[80vh] flex-col">
-            <div className="mb-3 flex-1 space-y-4 rounded-2xl border border-slate-200 bg-white/70 p-4 pb-36">
+          <section className="relative flex min-h-[80vh] min-w-0 flex-col">
+            <div className="mb-3 min-w-0 flex-1 space-y-4 overflow-x-hidden rounded-2xl border border-slate-200 bg-white/70 p-4 pb-36">
               {isBootstrapping ? (
-                <article className="mr-auto max-w-[88%] rounded-2xl bg-[#f4efe6] px-4 py-3 text-sm text-slate-700 shadow-sm">
+                <article className="mr-auto w-full max-w-[min(100%,36rem)] rounded-2xl bg-[#f4efe6] px-4 py-3 text-sm text-slate-700 shadow-sm">
                   Loading your chats...
                 </article>
               ) : null}
               {messages.map((message) => (
                 <article
                   key={message.id}
-                  className={`max-w-[88%] rounded-2xl px-4 py-3 text-sm whitespace-pre-wrap ${
+                  className={`max-w-[min(100%,40rem)] rounded-2xl px-4 py-3 text-sm break-words [overflow-wrap:anywhere] ${
                     message.role === "user"
-                      ? "ml-auto bg-[#d97757] text-white"
-                      : "mr-auto bg-[#f4efe6] text-slate-900 shadow-sm"
+                      ? "ml-auto w-fit whitespace-pre-wrap bg-[#d97757] text-white"
+                      : "mr-auto min-w-0 w-full bg-[#f4efe6] text-slate-900 shadow-sm"
                   }`}
                 >
                   {message.role === "assistant" ? (
-                    <div className="markdown-content">
+                    <div className="markdown-content min-w-0">
                       <ReactMarkdown remarkPlugins={[remarkGfm]}>
                         {message.content}
                       </ReactMarkdown>
@@ -293,7 +293,7 @@ export default function ChatPage() {
                 </article>
               ))}
               {isLoading ? (
-                <article className="mr-auto max-w-[88%] rounded-2xl bg-[#f4efe6] px-4 py-3 text-sm text-slate-500 shadow-sm">
+                <article className="mr-auto w-full max-w-[min(100%,40rem)] rounded-2xl bg-[#f4efe6] px-4 py-3 text-sm text-slate-500 shadow-sm">
                   Claude is thinking...
                 </article>
               ) : null}
@@ -301,7 +301,7 @@ export default function ChatPage() {
 
             <form
               onSubmit={handleSubmit}
-              className="sticky bottom-0 z-20 mt-auto rounded-2xl border border-slate-300 bg-white p-3 shadow-sm"
+              className="sticky bottom-0 z-20 mt-auto min-w-0 rounded-2xl border border-slate-300 bg-white p-3 shadow-sm"
             >
               <label htmlFor="chatInput" className="sr-only">
                 Message

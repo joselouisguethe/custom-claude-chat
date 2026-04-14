@@ -28,6 +28,29 @@ body {
 .markdown-content {
   white-space: normal;
   line-height: 1.6;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  overflow-x: auto;
+}
+
+.markdown-content img {
+  max-width: 100%;
+  height: auto;
+}
+
+.markdown-content table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9em;
+  table-layout: fixed;
+}
+
+.markdown-content th,
+.markdown-content td {
+  border: 1px solid #cbd5e1;
+  padding: 0.35rem 0.5rem;
+  word-break: break-word;
 }
 
 .markdown-content > * + * {
@@ -88,6 +111,8 @@ body {
   border-radius: 0.75rem;
   padding: 0.85rem;
   overflow-x: auto;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 .markdown-content pre code {
