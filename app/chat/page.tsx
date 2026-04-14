@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { FormEvent, KeyboardEvent, useEffect, useMemo, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { AppHeader } from "@/components/app-header";
@@ -189,6 +189,17 @@ export default function ChatPage() {
     );
   };
 
+  const handleChatInputKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
+    if (event.key !== "Enter" || !event.ctrlKey) {
+      return;
+    }
+    event.preventDefault();
+    if (!canSend) {
+      return;
+    }
+    event.currentTarget.form?.requestSubmit();
+  };
+
   const handleDeleteSession = async (sessionId: string) => {
     const response = await fetch(`/api/sessions/${sessionId}`, {
       method: "DELETE",
@@ -310,6 +321,7 @@ export default function ChatPage() {
                 id="chatInput"
                 value={prompt}
                 onChange={(event) => setPrompt(event.target.value)}
+                onKeyDown={handleChatInputKeyDown}
                 placeholder="Message Claude..."
                 rows={4}
                 className="w-full resize-none rounded-xl border border-slate-200 p-3 text-sm outline-none transition focus:border-slate-400 focus:ring-2 focus:ring-slate-200"
