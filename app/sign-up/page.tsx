@@ -22,19 +22,52 @@ export default function SignUpPage() {
     setError("");
     setIsLoading(true);
 
-    const supabase = createClient();
-    const { error: authError } = await supabase.auth.signUp({
-      email: email.trim(),
-      password,
+    const res = await fetch("/api/auth/sign-up", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email: email.trim(), password }),
     });
 
-    if (authError) {
-      setError(authError.message);
+    const payload = (await res.json().catch(() => ({}))) as {
+      error?: string;
+      ok?: boolean;
+      canSignInImmediately?: boolean;
+    };
+
+    if (!res.ok || !payload.ok) {
+      setError(payload.error ?? "Sign up failed.");
       setIsLoading(false);
       return;
     }
 
-    router.replace("/chat");
+    if (payload.canSignInImmediately !== false) {
+      const supabase = createClient();
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email: email.trim(),
+        password,
+      });
+
+      if (signInError) {
+        setError(
+          "Account created, but sign-in failed. Try signing in with your password.",
+        );
+        setIsLoading(false);
+        return;
+      }
+
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+
+      if (session?.access_token) {
+        await fetch("/api/auth/ensure-profile", {
+          method: "POST",
+          headers: { Authorization: `Bearer ${session.access_token}` },
+        });
+      }
+    }
+
+    router.replace("/pending-approval");
     router.refresh();
   };
 
@@ -43,7 +76,7 @@ export default function SignUpPage() {
       <div className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
         <h1 className="mb-1 text-2xl font-semibold">Create account</h1>
         <p className="mb-6 text-sm text-slate-600">
-          Start saving your chat history securely.
+          Create your account. A super admin must approve access before use.
         </p>
         <form onSubmit={handleSubmit} className="space-y-3">
           <input

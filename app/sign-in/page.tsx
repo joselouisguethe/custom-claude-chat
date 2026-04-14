@@ -2,10 +2,10 @@
 
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { FormEvent, useMemo, useState } from "react";
+import { FormEvent, Suspense, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 
-export default function SignInPage() {
+function SignInForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [email, setEmail] = useState("");
@@ -33,6 +33,17 @@ export default function SignInPage() {
       setError(authError.message);
       setIsLoading(false);
       return;
+    }
+
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+
+    if (session?.access_token) {
+      await fetch("/api/auth/ensure-profile", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${session.access_token}` },
+      });
     }
 
     const nextPath = searchParams.get("next") || "/chat";
@@ -79,5 +90,19 @@ export default function SignInPage() {
         </p>
       </div>
     </main>
+  );
+}
+
+export default function SignInPage() {
+  return (
+    <Suspense
+      fallback={
+        <main className="flex min-h-screen items-center justify-center bg-[#f9f7f4] p-4 text-slate-600">
+          Loading…
+        </main>
+      }
+    >
+      <SignInForm />
+    </Suspense>
   );
 }

@@ -10,6 +10,7 @@ export function AppHeader() {
   const menuRef = useRef<HTMLDivElement | null>(null);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [userEmail, setUserEmail] = useState("");
+  const [role, setRole] = useState<"user" | "super_admin">("user");
 
   const avatarLabel = useMemo(
     () => (userEmail ? userEmail.slice(0, 1).toUpperCase() : "U"),
@@ -23,6 +24,16 @@ export function AppHeader() {
         data: { user },
       } = await supabase.auth.getUser();
       setUserEmail(user?.email ?? "");
+      if (user?.id) {
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("role")
+          .eq("id", user.id)
+          .single();
+        if (profile?.role === "super_admin") {
+          setRole("super_admin");
+        }
+      }
     };
     void readUser();
   }, []);
@@ -78,6 +89,14 @@ export function AppHeader() {
         >
           Converter
         </Link>
+        {role === "super_admin" ? (
+          <Link
+            href="/users"
+            className="rounded-md border border-slate-300 bg-white px-3 py-1.5 text-sm text-slate-700 transition hover:bg-slate-100"
+          >
+            Users
+          </Link>
+        ) : null}
 
         <div className="relative" ref={menuRef}>
           <button
