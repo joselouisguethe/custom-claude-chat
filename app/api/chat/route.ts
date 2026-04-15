@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { normalizeAnthropicModel } from "@/lib/anthropic-model";
 
 type ClaudeContentBlock = {
   type: string;
@@ -29,8 +30,6 @@ export async function POST(request: Request) {
   const apiKey = process.env.ANTHROPIC_API_KEY;
   const anthropicVersion = process.env.ANTHROPIC_VERSION;
   const anthropicBeta = process.env.ANTHROPIC_BETA;
-  const fallbackModel = process.env.ANTHROPIC_MODEL ?? "claude-opus-4-6";
-
   if (!apiKey || !anthropicVersion || !anthropicBeta) {
     return NextResponse.json(
       {
@@ -41,31 +40,18 @@ export async function POST(request: Request) {
     );
   }
 
-  const { data: profile, error: profileError } = await supabase
-    .from("profiles")
-    .select("anthropic_model,status")
-    .eq("id", user.id)
-    .single();
-
-  if (profileError || !profile) {
-    return NextResponse.json({ error: "Profile not found." }, { status: 403 });
-  }
-
-  if (profile.status !== "approved") {
-    return NextResponse.json(
-      { error: "Your account is waiting for admin approval." },
-      { status: 403 },
-    );
-  }
-
-  const model = profile.anthropic_model?.trim() || fallbackModel;
-
   let prompt = "";
   let sessionId = "";
+  let anthropicModelInput: string | undefined;
   try {
-    const body = (await request.json()) as { prompt?: string; sessionId?: string };
+    const body = (await request.json()) as {
+      prompt?: string;
+      sessionId?: string;
+      anthropicModel?: string;
+    };
     prompt = body.prompt?.trim() ?? "";
     sessionId = body.sessionId?.trim() ?? "";
+    anthropicModelInput = body.anthropicModel;
   } catch {
     return NextResponse.json({ error: "Invalid JSON body." }, { status: 400 });
   }
@@ -76,6 +62,8 @@ export async function POST(request: Request) {
       { status: 400 },
     );
   }
+
+  const model = normalizeAnthropicModel(anthropicModelInput);
 
   const { data: ownedSession, error: sessionError } = await supabase
     .from("chat_sessions")

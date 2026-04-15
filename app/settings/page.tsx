@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { AppHeader } from "@/components/app-header";
+import { setCachedAnthropicModel } from "@/lib/anthropic-model-cache";
 
 export default function SettingsPage() {
   const [anthropicModel, setAnthropicModel] = useState("");
@@ -35,6 +36,7 @@ export default function SettingsPage() {
         }
         setAnthropicModel(data.anthropicModel);
         setSavedModel(data.anthropicModel);
+        setCachedAnthropicModel(data.anthropicModel);
         if (data.role) setRole(data.role);
         if (data.status) setStatus(data.status);
       } catch (loadError) {
@@ -69,6 +71,7 @@ export default function SettingsPage() {
       }
       setAnthropicModel(data.anthropicModel);
       setSavedModel(data.anthropicModel);
+      setCachedAnthropicModel(data.anthropicModel);
       setMessage("Settings saved.");
     } catch (saveError) {
       const nextMessage =

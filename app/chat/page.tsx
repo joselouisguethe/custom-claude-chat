@@ -1,9 +1,20 @@
 "use client";
 
-import { FormEvent, KeyboardEvent, useEffect, useMemo, useState } from "react";
+import {
+  FormEvent,
+  KeyboardEvent,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { AppHeader } from "@/components/app-header";
+import {
+  ensureAnthropicModelCache,
+  getCachedAnthropicModel,
+} from "@/lib/anthropic-model-cache";
 
 type Message = {
   id: string;
@@ -29,6 +40,9 @@ export default function ChatPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [isBootstrapping, setIsBootstrapping] = useState(true);
   const [error, setError] = useState("");
+
+  const scrollToThinkingAfterCtrlEnterRef = useRef(false);
+  const thinkingStatusRef = useRef<HTMLElement | null>(null);
 
   const canSend = useMemo(
     () => Boolean(prompt.trim()) && !isLoading && Boolean(activeSessionId),
@@ -82,6 +96,7 @@ export default function ChatPage() {
 
     const bootstrap = async () => {
       try {
+        await ensureAnthropicModelCache();
         const items = await refreshSessions();
         if (!isMounted) return;
         if (items.length === 0) {
@@ -106,10 +121,21 @@ export default function ChatPage() {
     };
   }, []);
 
+  useEffect(() => {
+    if (!isLoading || !scrollToThinkingAfterCtrlEnterRef.current) {
+      return;
+    }
+    scrollToThinkingAfterCtrlEnterRef.current = false;
+    const el = thinkingStatusRef.current;
+    el?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    el?.focus({ preventScroll: true });
+  }, [isLoading]);
+
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const trimmedPrompt = prompt.trim();
     if (!trimmedPrompt || isLoading || !activeSessionId) {
+      scrollToThinkingAfterCtrlEnterRef.current = false;
       return;
     }
 
@@ -125,12 +151,18 @@ export default function ChatPage() {
     setIsLoading(true);
 
     try {
+      await ensureAnthropicModelCache();
+      const anthropicModel = getCachedAnthropicModel() ?? undefined;
       const response = await fetch("/api/chat", {
         method: "POST",
         headers: {
           "content-type": "application/json",
         },
-        body: JSON.stringify({ prompt: trimmedPrompt, sessionId: activeSessionId }),
+        body: JSON.stringify({
+          prompt: trimmedPrompt,
+          sessionId: activeSessionId,
+          anthropicModel,
+        }),
       });
 
       const data = (await response.json()) as {
@@ -197,6 +229,7 @@ export default function ChatPage() {
     if (!canSend) {
       return;
     }
+    scrollToThinkingAfterCtrlEnterRef.current = true;
     event.currentTarget.form?.requestSubmit();
   };
 
@@ -304,7 +337,11 @@ export default function ChatPage() {
                 </article>
               ))}
               {isLoading ? (
-                <article className="mr-auto w-full max-w-[min(100%,40rem)] rounded-2xl bg-[#f4efe6] px-4 py-3 text-sm text-slate-500 shadow-sm">
+                <article
+                  ref={thinkingStatusRef}
+                  tabIndex={-1}
+                  className="mr-auto w-full max-w-[min(100%,40rem)] rounded-2xl bg-[#f4efe6] px-4 py-3 text-sm text-slate-500 shadow-sm"
+                >
                   Claude is thinking...
                 </article>
               ) : null}

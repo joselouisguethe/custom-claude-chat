@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { clearCachedAnthropicModel } from "@/lib/anthropic-model-cache";
 
 export function AppHeader() {
   const router = useRouter();
@@ -55,6 +56,7 @@ export function AppHeader() {
   }, [isMenuOpen]);
 
   const handleSignOut = async () => {
+    clearCachedAnthropicModel();
     const supabase = createClient();
     await supabase.auth.signOut();
     router.replace("/sign-in");

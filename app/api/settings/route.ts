@@ -1,12 +1,9 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-
-const FALLBACK_MODEL = process.env.ANTHROPIC_MODEL ?? "claude-opus-4-6";
-
-const normalizeModel = (value?: string) => {
-  const normalized = value?.trim();
-  return normalized ? normalized.slice(0, 120) : FALLBACK_MODEL;
-};
+import {
+  FALLBACK_ANTHROPIC_MODEL,
+  normalizeAnthropicModel,
+} from "@/lib/anthropic-model";
 
 export async function GET() {
   const supabase = await createClient();
@@ -29,7 +26,7 @@ export async function GET() {
   }
 
   return NextResponse.json({
-    anthropicModel: data.anthropic_model ?? FALLBACK_MODEL,
+    anthropicModel: data.anthropic_model ?? FALLBACK_ANTHROPIC_MODEL,
     role: data.role,
     status: data.status,
   });
@@ -48,7 +45,7 @@ export async function PATCH(request: Request) {
   const body = (await request.json().catch(() => ({}))) as {
     anthropicModel?: string;
   };
-  const anthropicModel = normalizeModel(body.anthropicModel);
+  const anthropicModel = normalizeAnthropicModel(body.anthropicModel);
 
   const { data, error } = await supabase
     .from("profiles")
@@ -62,6 +59,6 @@ export async function PATCH(request: Request) {
   }
 
   return NextResponse.json({
-    anthropicModel: data.anthropic_model ?? FALLBACK_MODEL,
+    anthropicModel: data.anthropic_model ?? FALLBACK_ANTHROPIC_MODEL,
   });
 }
