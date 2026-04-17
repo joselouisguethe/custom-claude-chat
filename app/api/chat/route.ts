@@ -104,7 +104,7 @@ export async function POST(request: Request) {
 
   const requestBody = {
     model,
-    max_tokens: 1024,
+    max_tokens: 32768,
     messages: (history ?? []).map((item) => ({
       role: item.role,
       content: item.content,
