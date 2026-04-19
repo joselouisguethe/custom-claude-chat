@@ -3,7 +3,9 @@
 import {
   FormEvent,
   KeyboardEvent,
+  useCallback,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -43,6 +45,20 @@ export default function ChatPage() {
 
   const scrollToThinkingAfterCtrlEnterRef = useRef(false);
   const thinkingStatusRef = useRef<HTMLElement | null>(null);
+  const transcriptScrollRef = useRef<HTMLDivElement | null>(null);
+  const [transcriptHasOverflow, setTranscriptHasOverflow] = useState(false);
+
+  const scrollTranscriptToBottom = useCallback(() => {
+    const el = transcriptScrollRef.current;
+    if (!el) return;
+    el.scrollTop = el.scrollHeight;
+  }, []);
+
+  const updateTranscriptOverflow = useCallback(() => {
+    const el = transcriptScrollRef.current;
+    if (!el) return;
+    setTranscriptHasOverflow(el.scrollHeight > el.clientHeight + 1);
+  }, []);
 
   const canSend = useMemo(
     () => Boolean(prompt.trim()) && !isLoading && Boolean(activeSessionId),
@@ -130,6 +146,30 @@ export default function ChatPage() {
     el?.scrollIntoView({ behavior: "smooth", block: "nearest" });
     el?.focus({ preventScroll: true });
   }, [isLoading]);
+
+  useLayoutEffect(() => {
+    scrollTranscriptToBottom();
+  }, [messages, isLoading, scrollTranscriptToBottom]);
+
+  useLayoutEffect(() => {
+    updateTranscriptOverflow();
+  }, [messages, isLoading, isBootstrapping, updateTranscriptOverflow]);
+
+  useEffect(() => {
+    const el = transcriptScrollRef.current;
+    if (!el) return;
+    const ro = new ResizeObserver(() => {
+      updateTranscriptOverflow();
+    });
+    ro.observe(el);
+    el.addEventListener("scroll", updateTranscriptOverflow, { passive: true });
+    window.addEventListener("resize", updateTranscriptOverflow);
+    return () => {
+      ro.disconnect();
+      el.removeEventListener("scroll", updateTranscriptOverflow);
+      window.removeEventListener("resize", updateTranscriptOverflow);
+    };
+  }, [updateTranscriptOverflow]);
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -256,21 +296,21 @@ export default function ChatPage() {
   };
 
   return (
-    <main className="min-h-screen bg-[#f9f7f4] text-slate-900">
-      <div className="mx-auto w-full max-w-6xl px-4 py-6">
+    <main className="flex h-dvh max-h-dvh min-h-0 flex-col overflow-hidden bg-[#f9f7f4] text-slate-900">
+      <div className="mx-auto flex min-h-0 w-full max-w-6xl flex-1 flex-col px-4 py-6">
         <AppHeader />
 
-        <div className="grid min-w-0 grid-cols-1 gap-4 md:grid-cols-[minmax(0,270px)_minmax(0,1fr)]">
-          <aside className="min-w-0 rounded-2xl border border-slate-200 bg-[#f3eee4] p-3 md:sticky md:top-[5.5rem] md:h-[calc(100vh-7rem)]">
+        <div className="grid min-h-0 min-w-0 flex-1 grid-cols-1 grid-rows-[auto_minmax(0,1fr)] gap-4 md:grid-cols-[minmax(0,270px)_minmax(0,1fr)] md:grid-rows-1">
+          <aside className="flex min-h-0 min-w-0 flex-col rounded-2xl border border-slate-200 bg-[#f3eee4] p-3 md:h-full">
             <button
               type="button"
               onClick={createNewSession}
-              className="mb-3 w-full rounded-lg bg-slate-900 px-3 py-2 text-sm font-medium text-white transition hover:bg-slate-700"
+              className="mb-3 w-full shrink-0 rounded-lg bg-slate-900 px-3 py-2 text-sm font-medium text-white transition hover:bg-slate-700"
             >
               + New chat
             </button>
 
-            <div className="space-y-2">
+            <div className="scrollbar-none min-h-0 max-h-[40vh] space-y-2 overflow-y-auto md:max-h-none md:flex-1">
               {sessions.map((session) => (
                 <button
                   key={session.id}
@@ -309,47 +349,108 @@ export default function ChatPage() {
 
           </aside>
 
-          <section className="relative flex min-h-[80vh] min-w-0 flex-col">
-            <div className="mb-3 min-w-0 flex-1 space-y-4 overflow-x-hidden rounded-2xl border border-slate-200 bg-white/70 p-4 pb-36">
-              {isBootstrapping ? (
-                <article className="mr-auto w-full max-w-[min(100%,36rem)] rounded-2xl bg-[#f4efe6] px-4 py-3 text-sm text-slate-700 shadow-sm">
-                  Loading your chats...
-                </article>
-              ) : null}
-              {messages.map((message) => (
-                <article
-                  key={message.id}
-                  className={`max-w-[min(100%,40rem)] rounded-2xl px-4 py-3 text-sm break-words [overflow-wrap:anywhere] ${
-                    message.role === "user"
-                      ? "ml-auto w-fit whitespace-pre-wrap bg-[#d97757] text-white"
-                      : "mr-auto min-w-0 w-full bg-[#f4efe6] text-slate-900 shadow-sm"
-                  }`}
-                >
-                  {message.role === "assistant" ? (
-                    <div className="markdown-content min-w-0">
-                      <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                        {message.content}
-                      </ReactMarkdown>
-                    </div>
-                  ) : (
-                    message.content
-                  )}
-                </article>
-              ))}
-              {isLoading ? (
-                <article
-                  ref={thinkingStatusRef}
-                  tabIndex={-1}
-                  className="mr-auto w-full max-w-[min(100%,40rem)] rounded-2xl bg-[#f4efe6] px-4 py-3 text-sm text-slate-500 shadow-sm"
-                >
-                  Claude is thinking...
-                </article>
+          <section className="relative flex min-h-0 min-w-0 flex-1 flex-col">
+            <div className="relative mb-3 flex min-h-0 min-w-0 flex-1 flex-col">
+              <div
+                ref={transcriptScrollRef}
+                className="chat-transcript-scroll min-h-0 flex-1 space-y-4 overflow-y-auto overflow-x-hidden rounded-2xl border border-slate-200 bg-white/70 p-4"
+              >
+                {isBootstrapping ? (
+                  <article className="mr-auto w-full max-w-[min(100%,36rem)] rounded-2xl bg-[#f4efe6] px-4 py-3 text-sm text-slate-700 shadow-sm">
+                    Loading your chats...
+                  </article>
+                ) : null}
+                {messages.map((message) => (
+                  <article
+                    key={message.id}
+                    className={`max-w-[min(100%,40rem)] rounded-2xl px-4 py-3 text-sm break-words [overflow-wrap:anywhere] ${
+                      message.role === "user"
+                        ? "ml-auto w-fit whitespace-pre-wrap bg-[#d97757] text-white"
+                        : "mr-auto min-w-0 w-full bg-[#f4efe6] text-slate-900 shadow-sm"
+                    }`}
+                  >
+                    {message.role === "assistant" ? (
+                      <div className="markdown-content min-w-0">
+                        <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                          {message.content}
+                        </ReactMarkdown>
+                      </div>
+                    ) : (
+                      message.content
+                    )}
+                  </article>
+                ))}
+                {isLoading ? (
+                  <article
+                    ref={thinkingStatusRef}
+                    tabIndex={-1}
+                    className="mr-auto w-full max-w-[min(100%,40rem)] rounded-2xl bg-[#f4efe6] px-4 py-3 text-sm text-slate-500 shadow-sm"
+                  >
+                    Claude is thinking...
+                  </article>
+                ) : null}
+              </div>
+              {transcriptHasOverflow ? (
+                <div className="pointer-events-none absolute top-1/2 right-2 z-10 flex -translate-y-1/2 flex-col gap-1">
+                  <button
+                    type="button"
+                    className="pointer-events-auto rounded-lg border border-slate-200 bg-white/95 p-1.5 text-slate-700 shadow-sm transition hover:bg-white"
+                    aria-label="Scroll chat to top"
+                    onClick={() => {
+                      transcriptScrollRef.current?.scrollTo({
+                        top: 0,
+                        behavior: "smooth",
+                      });
+                    }}
+                  >
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      viewBox="0 0 20 20"
+                      fill="currentColor"
+                      className="h-4 w-4"
+                      aria-hidden
+                    >
+                      <path
+                        fillRule="evenodd"
+                        d="M10 3a.75.75 0 01.53.22l4.5 4.5a.75.75 0 11-1.06 1.06L10 5.31 6.03 8.78a.75.75 0 11-1.06-1.06l4.5-4.5A.75.75 0 0110 3z"
+                        clipRule="evenodd"
+                      />
+                    </svg>
+                  </button>
+                  <button
+                    type="button"
+                    className="pointer-events-auto rounded-lg border border-slate-200 bg-white/95 p-1.5 text-slate-700 shadow-sm transition hover:bg-white"
+                    aria-label="Scroll chat to bottom"
+                    onClick={() => {
+                      const el = transcriptScrollRef.current;
+                      if (!el) return;
+                      el.scrollTo({
+                        top: el.scrollHeight,
+                        behavior: "smooth",
+                      });
+                    }}
+                  >
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      viewBox="0 0 20 20"
+                      fill="currentColor"
+                      className="h-4 w-4"
+                      aria-hidden
+                    >
+                      <path
+                        fillRule="evenodd"
+                        d="M10 17a.75.75 0 01-.53-.22l-4.5-4.5a.75.75 0 111.06-1.06L10 14.69l3.97-3.47a.75.75 0 111.06 1.06l-4.5 4.5A.75.75 0 0110 17z"
+                        clipRule="evenodd"
+                      />
+                    </svg>
+                  </button>
+                </div>
               ) : null}
             </div>
 
             <form
               onSubmit={handleSubmit}
-              className="sticky bottom-0 z-20 mt-auto min-w-0 rounded-2xl border border-slate-300 bg-white p-3 shadow-sm"
+              className="mt-auto min-w-0 shrink-0 rounded-2xl border border-slate-300 bg-white p-3 shadow-sm"
             >
               <label htmlFor="chatInput" className="sr-only">
                 Message
