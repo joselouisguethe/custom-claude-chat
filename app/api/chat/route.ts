@@ -15,6 +15,10 @@ type ClaudeApiResponse = {
 };
 
 const ANTHROPIC_ENDPOINT = "https://api.anthropic.com/v1/messages";
+const MAX_CONTEXT_TURNS = 5;
+const MAX_CONTEXT_MESSAGES = MAX_CONTEXT_TURNS * 2;
+const MAX_RESPONSE_TOKENS = 2048;
+
 const toTitle = (value: string) =>
   value.trim().replace(/\s+/g, " ").slice(0, 120) || "New chat";
 
@@ -102,10 +106,12 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: historyError.message }, { status: 500 });
   }
 
+  const recentHistory = (history ?? []).slice(-MAX_CONTEXT_MESSAGES);
+
   const requestBody = {
     model,
-    max_tokens: 32768,
-    messages: (history ?? []).map((item) => ({
+    max_tokens: MAX_RESPONSE_TOKENS,
+    messages: recentHistory.map((item) => ({
       role: item.role,
       content: item.content,
     })),
